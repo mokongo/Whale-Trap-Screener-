@@ -1,4 +1,4 @@
-# Whale Trap Screener & Telegram Alert Bot
+# app.py (formerly: Whale Trap Screener & Telegram Alert Bot)
 # Features:
 # - Tracks coins that pumped over 24 hours up to 7 days
 # - Detects potential reversal traps (e.g., RSI drop, CCI cooldown)
@@ -35,6 +35,31 @@ def detect_whale_traps(data):
     return df, top_traps
 
 # ------------------------------
+# COIN FETCHER (DYNAMIC)
+# ------------------------------
+def fetch_binance_trap_data():
+    url = "https://api.binance.com/api/v3/ticker/24hr"
+    r = requests.get(url)
+    raw = r.json()
+    coins = []
+
+    for item in raw:
+        symbol = item['symbol']
+        if not symbol.endswith("USDT") or symbol.endswith("BUSD") or "." in symbol:
+            continue
+
+        coins.append({
+            "Symbol": symbol + ".P",  # mimic perpetual pair naming convention
+            "Price Change % 7 days": 10 + hash(symbol) % 20,  # Mocked 7-day performance
+            "Price Change % 24 hours": float(item['priceChangePercent']),
+            "Relative Strength Index (14) 1 day": 45 + hash(symbol) % 10,  # mock
+            "Commodity Channel Index (20) 1 day": -20 + hash(symbol) % 40,  # mock
+            "BTC Correlation": 0.1  # placeholder static for now
+        })
+
+    return coins
+
+# ------------------------------
 # TELEGRAM SENDER
 # ------------------------------
 def send_telegram_report(bot_token, chat_id, top_traps, full_df):
@@ -51,7 +76,7 @@ def send_telegram_report(bot_token, chat_id, top_traps, full_df):
             row['trap_score']
         )
 
-    url = "https://api.telegram.org/bot%s/sendMessage" % bot_token
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {"chat_id": chat_id, "text": message}
     requests.post(url, json=payload)
 
@@ -59,7 +84,7 @@ def send_telegram_report(bot_token, chat_id, top_traps, full_df):
     full_df.to_csv(file_buffer, index=False)
     file_buffer.seek(0)
 
-    url_file = "https://api.telegram.org/bot%s/sendDocument" % bot_token
+    url_file = f"https://api.telegram.org/bot{bot_token}/sendDocument"
     files = {"document": ("trap_report.csv", file_buffer)}
     data = {"chat_id": chat_id}
     requests.post(url_file, files=files, data=data)
@@ -75,14 +100,7 @@ def telegram_webhook():
     chat_id = message.get("chat", {}).get("id")
 
     if text.strip().lower() == "/trap":
-        coins = [
-            {"Symbol": "ADAUSDT.P", "Price Change % 7 days": 15.0, "Price Change % 24 hours": -2.0, "Relative Strength Index (14) 1 day": 47, "Commodity Channel Index (20) 1 day": -30, "BTC Correlation": 0.15},
-            {"Symbol": "CRVUSDT.P", "Price Change % 7 days": 10.0, "Price Change % 24 hours": -3.2, "Relative Strength Index (14) 1 day": 44, "Commodity Channel Index (20) 1 day": -52, "BTC Correlation": 0.08},
-            {"Symbol": "SOLUSDT.P", "Price Change % 7 days": 28.0, "Price Change % 24 hours": -1.5, "Relative Strength Index (14) 1 day": 48, "Commodity Channel Index (20) 1 day": -20, "BTC Correlation": 0.10},
-            {"Symbol": "APEUSDT.P", "Price Change % 7 days": 6.0, "Price Change % 24 hours": -1.0, "Relative Strength Index (14) 1 day": 45, "Commodity Channel Index (20) 1 day": -10, "BTC Correlation": 0.22},
-            {"Symbol": "XRPUSDT.P", "Price Change % 7 days": 8.0, "Price Change % 24 hours": -0.5, "Relative Strength Index (14) 1 day": 49, "Commodity Channel Index (20) 1 day": -5, "BTC Correlation": 0.30}
-        ]
-
+        coins = fetch_binance_trap_data()
         df, top_traps = detect_whale_traps(coins)
         send_telegram_report(os.getenv("TELEGRAM_BOT_TOKEN"), chat_id, top_traps, df)
 
