@@ -1,4 +1,4 @@
-# app.py (formerly: Whale Trap Screener & Telegram Alert Bot)
+# app.py (formerly: Whale Trap Screener & Telegram Alert Bot new)
 # Features:
 # - Tracks coins that pumped over 24 hours up to 7 days
 # - Detects potential reversal traps (e.g., RSI drop, CCI cooldown)
