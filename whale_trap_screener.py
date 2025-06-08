@@ -108,9 +108,9 @@ def telegram_webhook():
 
 # ------------------------------
 # START FLASK SERVER
-# ------------------------------
+# -----------------------------
 @app.route('/')
-def home():
-    return "🐋 Whale Trap Screener is running!"
-     if __name__ == "__main__":
-         app.run(host="0.0.0.0", port=8000)
+    def home():
+        return "🐋 Whale Trap Screener is running!"
+            if __name__ == "__main__":
+                    app.run(host="0.0.0.0", port=8000)
